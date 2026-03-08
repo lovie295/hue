@@ -44,26 +44,12 @@ const WIND_BASE_STRENGTH = 2200;
 const WIND_TAP_MULTIPLIER = 2.0;
 const AMBIENT_DRIFT_STRENGTH = 0;
 const AMBIENT_MAX_SPEED = 0;
-const SHOW_PALETTE = [
-  "#FF6B6B",
-  "#FF9F1C",
-  "#FFD166",
-  "#06D6A0",
-  "#4CC9F0",
-  "#4361EE",
-  "#3A0CA3",
-  "#F72585",
-  "#B8F2E6",
-  "#90DBF4",
-  "#A9DEF9",
-  "#E4C1F9",
-] as const;
 const TEST_DISPLAY_MULTIPLIER = 1; // 1 = normal, >1 = pseudo load test (visual only)
 const TEST_RENDER_LIMIT = 180;
 
 export default function ShapeCloudScreen() {
   const router = useRouter();
-  const { logs, recolor } = useLogs();
+  const { logs } = useLogs();
   const sizeScale = useMemo(() => getSizeScale(logs.length), [logs.length]);
   const visibleCount = useMemo(
     () => getVisibleCount(logs.length, sizeScale),
@@ -89,7 +75,6 @@ export default function ShapeCloudScreen() {
   }, [baseItems]);
   const [fieldSize, setFieldSize] = useState({ width: 0, height: 0 });
   const [simItems, setSimItems] = useState<SimItem[]>([]);
-  const recoloredRef = useRef(false);
   const [windStrength, setWindStrength] = useState(0);
   const [weightedMode, setWeightedMode] = useState(false);
   const simRef = useRef<SimItem[]>([]);
@@ -104,22 +89,6 @@ export default function ShapeCloudScreen() {
     dirX: -1,
     dirY: 0,
   });
-
-  useEffect(() => {
-    if (!baseItems.length) return;
-    if (recoloredRef.current) return;
-    const updates = baseItems
-      .map((log, index) => {
-        const nextColor = pickShowColor(log.id, index);
-        if (log.color_hex.toLowerCase() === nextColor.toLowerCase()) return null;
-        return { id: log.id, color_hex: nextColor };
-      })
-      .filter(Boolean) as Array<{ id: string; color_hex: string }>;
-    recoloredRef.current = true;
-    if (updates.length) {
-      void recolor(updates);
-    }
-  }, [baseItems, recolor]);
 
   useEffect(() => {
     if (!fieldSize.width || !fieldSize.height) return;
@@ -558,15 +527,6 @@ function getVisibleCount(totalCount: number, sizeScale: number): number {
 function randomInRange(min: number, max: number): number {
   if (max <= min) return min;
   return min + Math.random() * (max - min);
-}
-
-function pickShowColor(id: string, index: number): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i += 1) {
-    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
-  }
-  const idx = (hash + index * 7) % SHOW_PALETTE.length;
-  return SHOW_PALETTE[idx];
 }
 
 function pickRandomWind(width: number, height: number): WindVector {

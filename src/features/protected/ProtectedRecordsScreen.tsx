@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from "react";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLogs } from "../../hooks/useLogs";
 
-const PROTECTED_PASSWORD = "hue000";
-const PASSWORD_RIDDLE = "なぞとき: 24色の気持ちをはじめて守る、最初の合言葉は？";
-const PASSWORD_HINTS = ["英小文字3文字 + 数字3文字", "最初の設定で表示されていた合言葉"];
+const PROTECTED_PASSWORD = "hue";
+const PASSWORD_RIDDLE = "あいうえお => 二酸化炭素";
+const PASSWORD_HINTS = ["H to O"];
 const MONTH_NAMES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"];
 const EMPTY_COLOR = "#E8ECF1";
 
@@ -18,6 +19,7 @@ export default function ProtectedRecordsScreen() {
   const [error, setError] = useState("");
   const [showHints, setShowHints] = useState(false);
   const [viewMode, setViewMode] = useState<"dashboard" | "list">("dashboard");
+  const [showMonthMoodInfo, setShowMonthMoodInfo] = useState(false);
 
   const rows = useMemo(
     () =>
@@ -49,6 +51,12 @@ export default function ProtectedRecordsScreen() {
     const thisMonthTop = pickTopColor(thisMonthColorCount);
     const thisMonthTopColor = thisMonthTop?.color ?? EMPTY_COLOR;
     const thisMonthTopCount = thisMonthTop?.count ?? 0;
+    const thisMonthActiveDays = new Set(
+      thisMonthLogs.map((log) => {
+        const d = new Date(log.timestamp);
+        return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      })
+    ).size;
 
     const past6 = Array.from({ length: 6 }).map((_, i) => {
       const d = new Date(year, month - (5 - i), 1);
@@ -107,6 +115,7 @@ export default function ProtectedRecordsScreen() {
       daysInMonth,
       thisMonthLogs,
       thisMonthCount: thisMonthLogs.length,
+      thisMonthActiveDays,
       thisMonthTopColor,
       thisMonthTopCount,
       past6,
@@ -176,14 +185,23 @@ export default function ProtectedRecordsScreen() {
           </View>
 
           <View style={styles.heroCard}>
-            <Text style={styles.cardTitle}>今月のムード</Text>
+            <View style={styles.cardTitleRow}>
+              <Text style={styles.cardTitle}>今月のムード</Text>
+              <Pressable
+                style={styles.infoBtn}
+                onPress={() => setShowMonthMoodInfo(true)}
+                hitSlop={8}
+              >
+                <Feather name="info" size={13} color="#6D7A88" />
+              </Pressable>
+            </View>
             <View style={styles.heroBody}>
               <View style={[styles.heroColor, { backgroundColor: dashboard.thisMonthTopColor }]} />
               <View style={styles.heroMeta}>
                 <Text style={styles.heroLine}>今月の記録 {dashboard.thisMonthCount}件</Text>
                 <Text style={styles.heroSub}>代表色の使用 {dashboard.thisMonthTopCount}回</Text>
                 <Text style={styles.heroSub}>
-                  今月の日数 {Math.min(dashboard.thisMonthCount, dashboard.daysInMonth)} / {dashboard.daysInMonth}
+                  今月の日数 {dashboard.thisMonthActiveDays} / {dashboard.daysInMonth}
                 </Text>
               </View>
             </View>
@@ -289,6 +307,23 @@ export default function ProtectedRecordsScreen() {
           ))}
         </ScrollView>
       )}
+
+      <Modal transparent visible={showMonthMoodInfo} animationType="fade">
+        <Pressable style={styles.infoBackdrop} onPress={() => setShowMonthMoodInfo(false)}>
+          <Pressable style={styles.infoCard} onPress={() => {}}>
+            <Text style={styles.infoTitle}>今月のムードの決まり方</Text>
+            <Text style={styles.infoText}>
+              今月に記録した色を数えて、いちばん多く選ばれた色が「今月のムード」です。
+            </Text>
+            <Text style={styles.infoText}>
+              その月のあなたがいちばん多く残した気持ちの色を表示しています。
+            </Text>
+            <Pressable style={styles.infoCloseBtn} onPress={() => setShowMonthMoodInfo(false)}>
+              <Text style={styles.infoCloseText}>閉じる</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -373,7 +408,18 @@ const styles = StyleSheet.create({
     padding: 12,
     gap: 10,
   },
+  cardTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   cardTitle: { fontSize: 13, color: "#4F5E6C", fontWeight: "600" },
+  infoBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#D8DEE5",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF",
+  },
   heroBody: { flexDirection: "row", alignItems: "center", gap: 12 },
   heroColor: {
     width: 84,
@@ -471,6 +517,34 @@ const styles = StyleSheet.create({
   metaText: { color: "#2B3641", fontSize: 13 },
   metaSub: { color: "#74808D", fontSize: 12 },
   chevron: { marginLeft: "auto", color: "#9AA5B1", fontSize: 20, lineHeight: 20 },
+  infoBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.22)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  infoCard: {
+    width: "100%",
+    borderRadius: 14,
+    backgroundColor: "#FFF",
+    borderWidth: 1,
+    borderColor: "#E4E8ED",
+    padding: 14,
+    gap: 10,
+  },
+  infoTitle: { fontSize: 15, fontWeight: "700", color: "#24303D" },
+  infoText: { fontSize: 13, color: "#4D5A68", lineHeight: 19 },
+  infoCloseBtn: {
+    marginTop: 4,
+    alignSelf: "flex-end",
+    borderWidth: 1,
+    borderColor: "#D8DEE5",
+    borderRadius: 999,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  infoCloseText: { fontSize: 12, color: "#4A5561" },
 });
 
 function countColors(logs: { color_hex: string }[]) {
